@@ -1247,16 +1247,31 @@
                     }
                 });
 
-                // Re-apply search filter to show only filtered results
+                // Re-apply filters (search + part filter) to show only filtered results
+                let filteredSortedData = sortedData;
+                
+                // Apply part filter if active
+                if (activePartFilter) {
+                    filteredSortedData = filteredSortedData.filter(car => {
+                        const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
+                        const parts = getCarParts(carId);
+                        return parts.some(p => p.trim() === activePartFilter);
+                    });
+                }
+                
+                // Apply search filter
                 const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-                const filteredSortedData = sortedData.filter(car => {
-                    return (
-                        car.car.toLowerCase().includes(searchTerm) ||
-                        car.year.toString().includes(searchTerm) ||
-                        car.dates.toLowerCase().includes(searchTerm) ||
-                        car.locations.toLowerCase().includes(searchTerm)
-                    );
-                });
+                if (searchTerm || activePartFilter) {
+                    filteredSortedData = filteredSortedData.filter(car => {
+                        return (
+                            car.car.toLowerCase().includes(searchTerm) ||
+                            car.year.toString().includes(searchTerm) ||
+                            car.date.toLowerCase().includes(searchTerm) ||
+                            (car.location && car.location.toLowerCase().includes(searchTerm))
+                        );
+                    });
+                }
+                
                 displayTable(filteredSortedData);
                 updateStats(filteredSortedData);
             });
