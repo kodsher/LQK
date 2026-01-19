@@ -171,6 +171,27 @@
         .part-tag.active .part-tag-count {
             background: rgba(255, 255, 255, 0.3);
         }
+        .part-cost {
+            cursor: text;
+            border-bottom: 1px dotted transparent;
+            transition: border-color 0.2s ease;
+        }
+        .part-cost:hover {
+            border-bottom-color: currentColor;
+        }
+        .part-cost-input {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-primary);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+            width: 80px;
+            outline: none;
+        }
+        .part-cost-input:focus {
+            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2);
+        }
         .clear-tags-btn {
             padding: 6px 12px;
             background: #da3633;
@@ -1758,14 +1779,23 @@
             }
 
             container.innerHTML = partsArray.map(([part, data]) => {
-                const costDisplay = data.cost ? ` - $${data.cost}` : '';
+                const costDisplay = data.cost ? `$${data.cost}` : '$---';
                 return `
-                <div class="part-tag" data-part="${escapeHtml(part)}" onclick="event.stopPropagation(); filterByPart('${part.replace(/'/g, "\\'")}')">
-                    <span class="part-name">${escapeHtml(part)}${costDisplay}</span>
+                <div class="part-tag" data-part="${escapeHtml(part)}">
+                    <span class="part-name">${escapeHtml(part)} - <span class="part-cost" data-part="${escapeHtml(part).replace(/'/g, "\\'")}" data-cost="${data.cost || ''}" ondblclick="event.stopPropagation(); enableCostEdit(this)">${costDisplay}</span></span>
                     <span class="part-tag-count">${data.count}</span>
-                    <button class="part-cost-edit-btn" onclick="event.stopPropagation(); editPartCost('${part.replace(/'/g, "\\'")}', '${data.cost || ''}')" title="Edit cost">✎</button>
                 </div>
             `}).join('');
+
+            // Add click handler for filtering (but not when clicking on cost)
+            document.querySelectorAll('.part-tag').forEach(tag => {
+                tag.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('part-cost')) {
+                        const part = tag.getAttribute('data-part');
+                        filterByPart(part);
+                    }
+                });
+            });
         }
 
         // Filter by part
@@ -1799,60 +1829,97 @@
             applyFilters();
         }
 
-        // Edit cost for all instances of a part
-        function editPartCost(partName, currentCost) {
-            const newCost = prompt(`Enter cost for "${partName}":`, currentCost);
+        // Enable inline editing for part cost
+        function enableCostEdit(costElement) {
+            const partName = costElement.getAttribute('data-part');
+            const currentCost = costElement.getAttribute('data-cost');
 
-            // Check if user cancelled
-            if (newCost === null) return;
+            // Create input element
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentCost;
+            input.className = 'part-cost-input';
 
-            // Validate cost (should be a number or empty)
-            if (newCost !== '' && isNaN(parseFloat(newCost))) {
-                alert('Please enter a valid number or leave empty');
-                return;
-            }
+            // Prevent filtering when clicking on input
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
 
-            // Update all instances of this part
-            const partsData = localStorage.getItem('lqkCarParts');
-            if (!partsData) return;
+            // Replace the span with input
+            costElement.innerHTML = '';
+            costElement.appendChild(input);
+            input.focus();
+            input.select();
 
-            try {
-                const allParts = JSON.parse(partsData);
-                let modified = false;
+            // Handle saving on Enter or blur
+            const saveCost = () => {
+                const newCost = input.value.trim();
 
-                // Iterate through all cars and update the part cost
-                for (const [carId, parts] of Object.entries(allParts)) {
-                    if (Array.isArray(parts)) {
-                        parts.forEach(part => {
-                            const currentPartName = typeof part === 'object' ? part.name : part;
-                            if (currentPartName === partName) {
-                                if (typeof part === 'string') {
-                                    // Migrate to object format
-                                    const index = allParts[carId].indexOf(part);
-                                    allParts[carId][index] = {
-                                        name: part,
-                                        str: '',
-                                        price: '',
-                                        cost: newCost === '' ? '' : parseFloat(newCost)
-                                    };
-                                } else {
-                                    part.cost = newCost === '' ? '' : parseFloat(newCost);
+                // Validate cost (should be a number or empty)
+                if (newCost !== '' && isNaN(parseFloat(newCost))) {
+                    // Restore original value
+                    const costDisplay = currentCost ? `$${currentCost}` : '$---';
+                    costElement.innerHTML = costDisplay;
+                    return;
+                }
+
+                // Update all instances of this part
+                const partsData = localStorage.getItem('lqkCarParts');
+                if (!partsData) {
+                    const costDisplay = currentCost ? `$${currentCost}` : '$---';
+                    costElement.innerHTML = costDisplay;
+                    return;
+                }
+
+                try {
+                    const allParts = JSON.parse(partsData);
+                    let modified = false;
+
+                    // Iterate through all cars and update the part cost
+                    for (const [carId, parts] of Object.entries(allParts)) {
+                        if (Array.isArray(parts)) {
+                            parts.forEach(part => {
+                                const currentPartName = typeof part === 'object' ? part.name : part;
+                                if (currentPartName === partName) {
+                                    if (typeof part === 'string') {
+                                        // Migrate to object format
+                                        const index = allParts[carId].indexOf(part);
+                                        allParts[carId][index] = {
+                                            name: part,
+                                            str: '',
+                                            price: '',
+                                            cost: newCost === '' ? '' : parseFloat(newCost)
+                                        };
+                                    } else {
+                                        part.cost = newCost === '' ? '' : parseFloat(newCost);
+                                    }
+                                    modified = true;
                                 }
-                                modified = true;
-                            }
-                        });
+                            });
+                        }
                     }
-                }
 
-                if (modified) {
-                    localStorage.setItem('lqkCarParts', JSON.stringify(allParts));
-                    loadAllParts();
-                    displayTable(carData); // Refresh the table to show updated costs
+                    if (modified) {
+                        localStorage.setItem('lqkCarParts', JSON.stringify(allParts));
+                        loadAllParts();
+                        displayTable(carData); // Refresh the table to show updated costs
+                    }
+                } catch (e) {
+                    console.error('Error updating part cost:', e);
+                    const costDisplay = currentCost ? `$${currentCost}` : '$---';
+                    costElement.innerHTML = costDisplay;
                 }
-            } catch (e) {
-                console.error('Error updating part cost:', e);
-                alert('Error updating part cost');
-            }
+            };
+
+            // Save on Enter key
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    saveCost();
+                }
+            });
+
+            // Save on blur (when clicking away)
+            input.addEventListener('blur', saveCost);
         }
 
         // Apply all filters (search + part)
