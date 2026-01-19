@@ -206,6 +206,29 @@
             background: #f85149;
             transform: translateY(-1px);
         }
+        .editable-field {
+            cursor: pointer;
+            border-bottom: 1px dotted transparent;
+            transition: border-color 0.2s ease;
+            padding: 0 2px;
+        }
+        .editable-field:hover {
+            border-bottom-color: rgba(255, 255, 255, 0.5);
+        }
+        .inline-edit-input {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-primary);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 12px;
+            color: var(--text-primary);
+            width: 70px;
+            outline: none;
+            font-family: inherit;
+        }
+        .inline-edit-input:focus {
+            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2);
+        }
 
 
         .stat-box {
@@ -481,6 +504,34 @@
         }
         .part-edit-btn:hover {
             background-color: #9a6700;
+        }
+        .part-copy-btn {
+            background-color: #238636;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .part-copy-btn:hover {
+            background-color: #2ea043;
+            transform: scale(1.05);
+        }
+        .part-paste-btn {
+            background-color: #1f6feb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .part-paste-btn:hover {
+            background-color: #58a6ff;
+            transform: scale(1.05);
         }
         .greenlight-checkbox {
             appearance: none;
@@ -969,16 +1020,18 @@
                                         <div class="part-card-main">
                                             <span class="part-card-text">${escapeHtml(partName)}</span>
                                             <div class="part-card-details">
-                                                <span class="part-detail">STR: ${escapeHtml(String(strDisplay))}</span>
-                                                <span class="part-detail">Price: ${escapeHtml(String(partPrice))}</span>
+                                                <span class="part-detail">STR: <span class="editable-field" data-field="str" data-car-id="${carId}" data-part-index="${partIndex}" data-value="${escapeHtml(String(part.str || ''))}" ondblclick="event.stopPropagation(); editPartField(this, 'str')">${escapeHtml(String(strDisplay))}</span></span>
+                                                <span class="part-detail">Price: <span class="editable-field" data-field="price" data-car-id="${carId}" data-part-index="${partIndex}" data-value="${escapeHtml(String(part.price || ''))}" ondblclick="event.stopPropagation(); editPartField(this, 'price')">${escapeHtml(String(partPrice))}</span></span>
                                                 <span class="part-detail">Profit: ${escapeHtml(String(profitDisplay))}</span>
-                                                <span class="part-detail">90 Vol: ${escapeHtml(String(partVol90))}</span>
+                                                <span class="part-detail">90 Vol: <span class="editable-field" data-field="vol90" data-car-id="${carId}" data-part-index="${partIndex}" data-value="${escapeHtml(String(part.vol90 || ''))}" ondblclick="event.stopPropagation(); editPartField(this, 'vol90')">${escapeHtml(String(partVol90))}</span></span>
                                             </div>
                                         </div>
                                         <div class="part-card-actions">
-                                            <button class="part-edit-btn" onclick="event.stopPropagation(); editPart('${carId}', ${partIndex})">✎</button>
+                                            <button class="part-copy-btn" onclick="event.stopPropagation(); copyPart('${carId}', ${partIndex})" title="Copy part">▢</button>
+                                            <button class="part-paste-btn" onclick="event.stopPropagation(); pastePart('${carId}', ${partIndex})" title="Paste part">▣</button>
+                                            <button class="part-edit-btn" onclick="event.stopPropagation(); editPart('${carId}', ${partIndex})" title="Edit part">✎</button>
                                             <input type="checkbox" class="greenlight-checkbox" ${isGreenlighted ? 'checked' : ''} onchange="event.stopPropagation(); toggleGreenlight('${carId}', '${escapeHtml(partName).replace(/'/g, "\\'")}')">
-                                            <button class="part-delete-btn" onclick="event.stopPropagation(); deletePart('${carId}', ${partIndex})">✕</button>
+                                            <button class="part-delete-btn" onclick="event.stopPropagation(); deletePart('${carId}', ${partIndex})" title="Delete part">−</button>
                                         </div>
                                     </div>
                                 `}).join('')}
@@ -1376,6 +1429,231 @@
                         arrow.classList.add('expanded');
                     }
                 });
+            });
+        }
+
+        // Edit part field inline
+        function editPartField(fieldElement, fieldType) {
+            const carId = fieldElement.getAttribute('data-car-id');
+            const partIndex = parseInt(fieldElement.getAttribute('data-part-index'));
+            const currentValue = fieldElement.getAttribute('data-value');
+
+            // Prevent editing if field is already being edited
+            if (fieldElement.querySelector('input')) {
+                return;
+            }
+
+            // Create input element based on field type
+            const input = document.createElement('input');
+            input.type = fieldType === 'price' || fieldType === 'vol90' ? 'number' : 'text';
+            input.value = currentValue;
+            input.className = 'inline-edit-input';
+
+            // Set input attributes based on field type
+            if (fieldType === 'price') {
+                input.step = '0.01';
+                input.min = '0';
+                input.placeholder = 'Price';
+            } else if (fieldType === 'vol90') {
+                input.min = '0';
+                input.placeholder = '90 Day Vol';
+            } else if (fieldType === 'str') {
+                input.placeholder = 'STR';
+            }
+
+            // Prevent click from propagating
+            input.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // Replace the field content with input
+            fieldElement.innerHTML = '';
+            fieldElement.appendChild(input);
+            input.focus();
+            input.select();
+
+            // Handle saving on Enter or blur
+            const saveField = () => {
+                const newValue = input.value.trim();
+
+                // Get current parts
+                const parts = getCarParts(carId);
+                const part = parts[partIndex];
+
+                if (!part) {
+                    // Restore original value
+                    displayField();
+                    return;
+                }
+
+                // Validate and save the new value
+                let isValid = true;
+                let processedValue = newValue;
+
+                if (fieldType === 'price') {
+                    if (newValue === '' || isNaN(parseFloat(newValue))) {
+                        processedValue = '';
+                    } else {
+                        processedValue = parseFloat(newValue).toFixed(2);
+                    }
+                } else if (fieldType === 'vol90') {
+                    if (newValue === '' || isNaN(parseInt(newValue))) {
+                        processedValue = '';
+                    } else {
+                        processedValue = parseInt(newValue);
+                    }
+                }
+
+                // Update the part
+                if (typeof part === 'string') {
+                    // Migrate to object format
+                    parts[partIndex] = {
+                        name: part,
+                        str: '',
+                        price: '',
+                        cost: '',
+                        vol90: ''
+                    };
+                }
+
+                // Update the specific field
+                parts[partIndex][fieldType] = processedValue;
+
+                // Save to localStorage
+                saveCarParts(carId, parts);
+
+                // Refresh the table
+                applyFilters();
+            };
+
+            const displayField = () => {
+                // Restore display (will be refreshed by applyFilters)
+                fieldElement.innerHTML = currentValue;
+            };
+
+            // Save on Enter key
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    saveField();
+                }
+            });
+
+            // Save on blur (when clicking away)
+            input.addEventListener('blur', saveField);
+
+            // Cancel on Escape
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    displayField();
+                }
+            });
+        }
+
+        // Copy part data to clipboard
+        function copyPart(carId, partIndex) {
+            const parts = getCarParts(carId);
+            const part = parts[partIndex];
+
+            if (!part) return;
+
+            // Get part data (handle both string and object formats)
+            const partData = typeof part === 'string' ? { name: part } : {
+                name: part.name || '',
+                str: part.str || '',
+                price: part.price || '',
+                cost: part.cost || '',
+                vol90: part.vol90 || ''
+            };
+
+            // Convert to JSON string for clipboard
+            const clipboardData = JSON.stringify(partData);
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(clipboardData).then(() => {
+                // Show brief feedback
+                const btn = document.querySelector(`button[onclick="event.stopPropagation(); copyPart('${carId}', ${partIndex})"]`);
+                if (btn) {
+                    const originalText = btn.textContent;
+                    btn.textContent = '•';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 1000);
+                }
+            }).catch(err => {
+                console.error('Failed to copy part:', err);
+                alert('Failed to copy part to clipboard');
+            });
+        }
+
+        // Paste part data from clipboard
+        function pastePart(carId, partIndex) {
+            // Read from clipboard
+            navigator.clipboard.readText().then(clipboardData => {
+                try {
+                    // Parse JSON data from clipboard
+                    const pastedData = JSON.parse(clipboardData);
+
+                    // Validate that it has at least a name field
+                    if (!pastedData.name) {
+                        alert('Clipboard does not contain valid part data');
+                        return;
+                    }
+
+                    // Get current parts
+                    const parts = getCarParts(carId);
+
+                    // Update the part with pasted data
+                    parts[partIndex] = {
+                        name: pastedData.name,
+                        str: pastedData.str || '',
+                        price: pastedData.price || '',
+                        cost: pastedData.cost || '',
+                        vol90: pastedData.vol90 || ''
+                    };
+
+                    // Save the updated parts
+                    saveCarParts(carId, parts);
+
+                    // Save expanded state before refresh
+                    const expandedRows = [];
+                    document.querySelectorAll('.parts-row.show').forEach(row => {
+                        expandedRows.push(row.id);
+                    });
+
+                    // Refresh the table
+                    applyFilters();
+
+                    // Restore expanded state after refresh
+                    requestAnimationFrame(() => {
+                        expandedRows.forEach(rowId => {
+                            const row = document.getElementById(rowId);
+                            const arrowId = rowId.replace('partsrow_', 'arrow_');
+                            const arrow = document.getElementById(arrowId);
+                            if (row) {
+                                row.classList.add('show');
+                            }
+                            if (arrow) {
+                                arrow.classList.add('expanded');
+                            }
+                        });
+                    });
+
+                    // Show brief feedback
+                    const btn = document.querySelector(`button[onclick="event.stopPropagation(); pastePart('${carId}', ${partIndex})"]`);
+                    if (btn) {
+                        const originalText = btn.textContent;
+                        btn.textContent = '•';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                        }, 1000);
+                    }
+                } catch (e) {
+                    console.error('Failed to parse clipboard data:', e);
+                    alert('Clipboard does not contain valid part data');
+                }
+            }).catch(err => {
+                console.error('Failed to read clipboard:', err);
+                alert('Failed to read from clipboard. Make sure you have copied a part first.');
             });
         }
 
