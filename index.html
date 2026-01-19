@@ -488,12 +488,20 @@
         }
         .part-card-actions {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .part-card-actions-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
             flex-shrink: 0;
         }
         .part-edit-btn {
-            background-color: #d29922;
+            background-color: var(--accent-primary);
             color: white;
             border: none;
             border-radius: 4px;
@@ -503,35 +511,53 @@
             transition: all 0.2s;
         }
         .part-edit-btn:hover {
-            background-color: #9a6700;
+            background-color: var(--accent-primary);
+            filter: brightness(1.2);
+        }
+        .part-edit-btn:active {
+            transform: scale(0.95);
         }
         .part-copy-btn {
-            background-color: #238636;
+            background-color: var(--accent-primary);
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 4px 8px;
+            padding: 3px 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .part-copy-btn:hover {
-            background-color: #2ea043;
-            transform: scale(1.05);
+            background-color: var(--accent-primary);
+            filter: brightness(1.2);
+        }
+        .part-copy-btn:active {
+            transform: scale(0.95);
         }
         .part-paste-btn {
-            background-color: #1f6feb;
+            background-color: var(--accent-primary);
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 4px 8px;
+            padding: 3px 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .part-paste-btn:hover {
-            background-color: #58a6ff;
-            transform: scale(1.05);
+            background-color: var(--accent-primary);
+            filter: brightness(1.2);
+        }
+        .part-paste-btn:active {
+            transform: scale(0.95);
         }
         .greenlight-checkbox {
             appearance: none;
@@ -546,8 +572,8 @@
             transition: all 0.2s;
         }
         .greenlight-checkbox:checked {
-            background-color: #238636;
-            border-color: #3fb950;
+            background-color: var(--accent-primary);
+            border-color: var(--accent-primary);
         }
         .greenlight-checkbox:checked::after {
             content: '✓';
@@ -560,10 +586,10 @@
             font-weight: bold;
         }
         .greenlight-checkbox:hover {
-            border-color: #58a6ff;
+            border-color: var(--accent-primary);
         }
         .greenlight-checkbox:checked:hover {
-            border-color: #3fb950;
+            border-color: var(--accent-primary);
         }
         .part-card-text {
             color: #c9d1d9;
@@ -576,8 +602,8 @@
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 14px;
+            padding: 3px 8px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
             white-space: nowrap;
@@ -585,7 +611,6 @@
         }
         .part-delete-btn:hover {
             background-color: #f85149;
-            transform: scale(1.05);
         }
         .no-parts-message {
             color: #6e7681;
@@ -1026,12 +1051,13 @@
                                                 <span class="part-detail">90 Vol: <span class="editable-field" data-field="vol90" data-car-id="${carId}" data-part-index="${partIndex}" data-value="${escapeHtml(String(part.vol90 || ''))}" ondblclick="event.stopPropagation(); editPartField(this, 'vol90')">${escapeHtml(String(partVol90))}</span></span>
                                             </div>
                                         </div>
-                                        <div class="part-card-actions">
-                                            <button class="part-copy-btn" onclick="event.stopPropagation(); copyPart('${carId}', ${partIndex})" title="Copy part">▢</button>
-                                            <button class="part-paste-btn" onclick="event.stopPropagation(); pastePart('${carId}', ${partIndex})" title="Paste part">▣</button>
-                                            <button class="part-edit-btn" onclick="event.stopPropagation(); editPart('${carId}', ${partIndex})" title="Edit part">✎</button>
+                                        <div class="part-card-actions-container">
                                             <input type="checkbox" class="greenlight-checkbox" ${isGreenlighted ? 'checked' : ''} onchange="event.stopPropagation(); toggleGreenlight('${carId}', '${escapeHtml(partName).replace(/'/g, "\\'")}')">
-                                            <button class="part-delete-btn" onclick="event.stopPropagation(); deletePart('${carId}', ${partIndex})" title="Delete part">−</button>
+                                            <div class="part-card-actions">
+                                                <button class="part-copy-btn" onclick="event.stopPropagation(); copyPart(${JSON.stringify(carId)}, ${partIndex})" title="Copy part">copy</button>
+                                                <button class="part-paste-btn" onclick="event.stopPropagation(); pastePart(${JSON.stringify(carId)}, ${partIndex})" title="Paste part">paste</button>
+                                                <button class="part-delete-btn" onclick="event.stopPropagation(); deletePart(${JSON.stringify(carId)}, ${partIndex})" title="Delete part">−</button>
+                                            </div>
                                         </div>
                                     </div>
                                 `}).join('')}
@@ -1522,8 +1548,29 @@
                 // Save to localStorage
                 saveCarParts(carId, parts);
 
+                // Save expanded state before refresh
+                const expandedRows = [];
+                document.querySelectorAll('.parts-row.show').forEach(row => {
+                    expandedRows.push(row.id);
+                });
+
                 // Refresh the table
                 applyFilters();
+
+                // Restore expanded state after refresh
+                requestAnimationFrame(() => {
+                    expandedRows.forEach(rowId => {
+                        const row = document.getElementById(rowId);
+                        const arrowId = rowId.replace('partsrow_', 'arrow_');
+                        const arrow = document.getElementById(arrowId);
+                        if (row) {
+                            row.classList.add('show');
+                        }
+                        if (arrow) {
+                            arrow.classList.add('expanded');
+                        }
+                    });
+                });
             };
 
             const displayField = () => {
@@ -1571,12 +1618,17 @@
             // Copy to clipboard
             navigator.clipboard.writeText(clipboardData).then(() => {
                 // Show brief feedback
-                const btn = document.querySelector(`button[onclick="event.stopPropagation(); copyPart('${carId}', ${partIndex})"]`);
-                if (btn) {
-                    const originalText = btn.textContent;
-                    btn.textContent = '•';
+                const copyBtns = document.querySelectorAll('.part-copy-btn');
+                const targetBtn = Array.from(copyBtns).find(btn => {
+                    const onclick = btn.getAttribute('onclick');
+                    return onclick && onclick.includes(`copyPart(${JSON.stringify(carId)}`);
+                });
+
+                if (targetBtn) {
+                    const originalText = targetBtn.textContent;
+                    targetBtn.textContent = 'copied!';
                     setTimeout(() => {
-                        btn.textContent = originalText;
+                        targetBtn.textContent = originalText;
                     }, 1000);
                 }
             }).catch(err => {
@@ -1587,11 +1639,13 @@
 
         // Paste part data from clipboard
         function pastePart(carId, partIndex) {
-            // Read from clipboard
+            // Request clipboard permission if needed and read
             navigator.clipboard.readText().then(clipboardData => {
+                console.log('Clipboard data:', clipboardData); // Debug log
                 try {
                     // Parse JSON data from clipboard
                     const pastedData = JSON.parse(clipboardData);
+                    console.log('Parsed data:', pastedData); // Debug log
 
                     // Validate that it has at least a name field
                     if (!pastedData.name) {
@@ -1601,6 +1655,7 @@
 
                     // Get current parts
                     const parts = getCarParts(carId);
+                    console.log('Parts before paste:', parts); // Debug log
 
                     // Update the part with pasted data
                     parts[partIndex] = {
@@ -1610,6 +1665,7 @@
                         cost: pastedData.cost || '',
                         vol90: pastedData.vol90 || ''
                     };
+                    console.log('Parts after paste:', parts); // Debug log
 
                     // Save the updated parts
                     saveCarParts(carId, parts);
@@ -1638,22 +1694,27 @@
                         });
                     });
 
-                    // Show brief feedback
-                    const btn = document.querySelector(`button[onclick="event.stopPropagation(); pastePart('${carId}', ${partIndex})"]`);
-                    if (btn) {
-                        const originalText = btn.textContent;
-                        btn.textContent = '•';
+                    // Show brief feedback - find all paste buttons and match by car
+                    const pasteBtns = document.querySelectorAll('.part-paste-btn');
+                    const targetBtn = Array.from(pasteBtns).find(btn => {
+                        const onclick = btn.getAttribute('onclick');
+                        return onclick && onclick.includes(`pastePart(${JSON.stringify(carId)}`);
+                    });
+
+                    if (targetBtn) {
+                        const originalText = targetBtn.textContent;
+                        targetBtn.textContent = 'pasted!';
                         setTimeout(() => {
-                            btn.textContent = originalText;
+                            targetBtn.textContent = originalText;
                         }, 1000);
                     }
                 } catch (e) {
                     console.error('Failed to parse clipboard data:', e);
-                    alert('Clipboard does not contain valid part data');
+                    alert('Clipboard does not contain valid part data. Error: ' + e.message);
                 }
             }).catch(err => {
                 console.error('Failed to read clipboard:', err);
-                alert('Failed to read from clipboard. Make sure you have copied a part first.');
+                alert('Failed to read from clipboard. Make sure you have copied a part first and have granted clipboard permissions.\n\nError: ' + err.message);
             });
         }
 
