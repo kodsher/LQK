@@ -738,6 +738,26 @@
             <div class="tags-container" id="tagsContainer">
                 <span style="color: var(--text-secondary); font-size: 13px;">Loading parts...</span>
             </div>
+
+        <div class="tags-section">
+            <div class="tags-header">
+                <span>✓ Filter by Confirmed</span>
+                <button class="clear-tags-btn" id="clearConfirmedBtn" style="display: none; float: right;" onclick="event.stopPropagation()">Clear Filter</button>
+            </div>
+            <div class="tags-container" id="confirmedContainer">
+                <div class="part-tag" data-confirmed="all" onclick="event.stopPropagation(); filterByConfirmed('all')">
+                    <span class="part-name">All</span>
+                    <span class="part-tag-count" id="confirmedAllCount">0</span>
+                </div>
+                <div class="part-tag" data-confirmed="yes" onclick="event.stopPropagation(); filterByConfirmed('yes')">
+                    <span class="part-name">Confirmed</span>
+                    <span class="part-tag-count" id="confirmedYesCount">0</span>
+                </div>
+                <div class="part-tag" data-confirmed="no" onclick="event.stopPropagation(); filterByConfirmed('no')">
+                    <span class="part-name">Not Confirmed</span>
+                    <span class="part-tag-count" id="confirmedNoCount">0</span>
+                </div>
+            </div>
         </div>
 
 <div class="table-container">
@@ -1387,6 +1407,9 @@
             }
             allGreenlighted[carId] = greenlightedParts;
             localStorage.setItem('lqkGreenlightedParts', JSON.stringify(allGreenlighted));
+
+            // Update confirmed counts
+            updateConfirmedCounts();
 
             // Save expanded state before refresh
             const expandedRows = [];
@@ -2086,6 +2109,7 @@
         });
         // Tags Filter Functionality
         let activePartFilter = null;
+        let activeConfirmedFilter = 'all'; // 'all', 'yes', 'no'
         let allParts = {};
 
         // Extract all unique parts from localStorage
@@ -2186,6 +2210,65 @@
             applyFilters();
         }
 
+        // Filter by confirmed status
+        function filterByConfirmed(status) {
+            const tagElement = document.querySelector(`.part-tag[data-confirmed="${status}"]`);
+            const clearBtn = document.getElementById('clearConfirmedBtn');
+
+            // If clicking the already active filter, clear it
+            if (activeConfirmedFilter === status) {
+                clearConfirmedFilter();
+                return;
+            }
+
+            // Remove active class from all confirmed tags
+            document.querySelectorAll('#confirmedContainer .part-tag').forEach(tag => tag.classList.remove('active'));
+
+            // Set new active filter
+            activeConfirmedFilter = status;
+            tagElement.classList.add('active');
+            clearBtn.style.display = 'inline-block';
+
+            // Apply filter
+            applyFilters();
+        }
+
+        // Clear confirmed filter
+        function clearConfirmedFilter() {
+            activeConfirmedFilter = 'all';
+            document.querySelectorAll('#confirmedContainer .part-tag').forEach(tag => tag.classList.remove('active'));
+            document.getElementById('clearConfirmedBtn').style.display = 'none';
+            applyFilters();
+        }
+
+        // Update confirmed counts
+        function updateConfirmedCounts() {
+            let allCount = 0;
+            let confirmedCount = 0;
+            let notConfirmedCount = 0;
+
+            carData.forEach(car => {
+                const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
+                const parts = getCarParts(carId);
+                const greenlightedParts = getGreenlightedParts(carId);
+
+                allCount += parts.length;
+
+                parts.forEach(part => {
+                    const partName = typeof part === 'string' ? part : part.name;
+                    if (greenlightedParts.includes(partName)) {
+                        confirmedCount++;
+                    } else {
+                        notConfirmedCount++;
+                    }
+                });
+            });
+
+            document.getElementById('confirmedAllCount').textContent = allCount;
+            document.getElementById('confirmedYesCount').textContent = confirmedCount;
+            document.getElementById('confirmedNoCount').textContent = notConfirmedCount;
+        }
+
         // Enable inline editing for part cost
         function enableCostEdit(costElement) {
             const partName = costElement.getAttribute('data-part');
@@ -2280,7 +2363,7 @@
             input.addEventListener('blur', saveCost);
         }
 
-        // Apply all filters (search + part)
+        // Apply all filters (search + part + confirmed)
         function applyFilters() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
@@ -2299,10 +2382,29 @@
                 if (activePartFilter) {
                     const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
                     const parts = getCarParts(carId);
-                    return parts.some(p => {
+                    const hasPart = parts.some(p => {
                         const partName = typeof p === 'string' ? p : p.name;
                         return partName.trim() === activePartFilter;
                     });
+                    if (!hasPart) return false;
+                }
+
+                // Confirmed filter
+                if (activeConfirmedFilter !== 'all') {
+                    const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
+                    const greenlightedParts = getGreenlightedParts(carId);
+                    const parts = getCarParts(carId);
+
+                    // Check if car has any confirmed parts
+                    const hasConfirmed = parts.some(p => {
+                        const partName = typeof p === 'string' ? p : p.name;
+                        return greenlightedParts.includes(partName);
+                    });
+
+                    // If filtering for "yes" (confirmed), car must have confirmed parts
+                    // If filtering for "no" (not confirmed), car must have no confirmed parts
+                    if (activeConfirmedFilter === 'yes' && !hasConfirmed) return false;
+                    if (activeConfirmedFilter === 'no' && hasConfirmed) return false;
                 }
 
                 return true;
@@ -2323,7 +2425,9 @@
         // Clear tags button handler
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('clearTagsBtn').addEventListener('click', clearPartFilter);
+            document.getElementById('clearConfirmedBtn').addEventListener('click', clearConfirmedFilter);
             loadAllParts();
+            updateConfirmedCounts();
         });
 
         // Reload tags when parts are modified
@@ -2331,6 +2435,7 @@
         saveCarParts = function() {
             const result = originalSaveCarParts.apply(this, arguments);
             loadAllParts();
+            updateConfirmedCounts();
             return result;
         };
 
