@@ -582,7 +582,7 @@
                 <div class="tags-section">
             <div class="tags-header">
                 <span>🏷️ Filter by Part</span>
-                <button class="clear-tags-btn" id="clearTagsBtn" style="display: none; float: right;">Clear Filter</button>
+                <button class="clear-tags-btn" id="clearTagsBtn" style="display: none; float: right;" onclick="event.stopPropagation()">Clear Filter</button>
             </div>
             <div class="tags-container" id="tagsContainer">
                 <span style="color: var(--text-secondary); font-size: 13px;">Loading parts...</span>
@@ -613,6 +613,15 @@
             <div class="modal-input-wrapper">
                 <input type="text" class="modal-input" id="modalPartInput" placeholder="Enter part name..." autocomplete="off">
                 <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
+            </div>
+            <div class="modal-input-wrapper">
+                <input type="text" class="modal-input" id="modalStrInput" placeholder="STR (optional)" autocomplete="off">
+            </div>
+            <div class="modal-input-wrapper">
+                <input type="number" class="modal-input" id="modalPriceInput" placeholder="Price (optional)" step="0.01" min="0">
+            </div>
+            <div class="modal-input-wrapper">
+                <input type="number" class="modal-input" id="modalCostInput" placeholder="Cost (optional)" step="0.01" min="0">
             </div>
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
@@ -935,7 +944,7 @@
                 expandedRows.push(row.id);
             });
 
-            refreshTable();
+            applyFilters();
 
             // Restore expanded state after refresh
             requestAnimationFrame(() => {
@@ -989,7 +998,7 @@
                 expandedRows.push(row.id);
             });
 
-            refreshTable();
+            applyFilters();
 
             // Restore expanded state after refresh
             requestAnimationFrame(() => {
@@ -1038,7 +1047,7 @@
                 expandedRows.push(row.id);
             });
 
-            refreshTable();
+            applyFilters();
 
             // Restore expanded state after refresh
             requestAnimationFrame(() => {
@@ -1084,7 +1093,7 @@
                 expandedRows.push(row.id);
             });
 
-            refreshTable();
+            applyFilters();
 
             // Restore expanded state after refresh
             requestAnimationFrame(() => {
@@ -1236,6 +1245,42 @@
                         return currentSort.direction === 'asc' ? dateA - dateB : dateB - dateA;
                     }
 
+                    // Handle location sorting
+                    if (column === 'location') {
+                        const parseLocation = (str) => {
+                            if (!str || !str.trim()) return { section: 'ZZZ', row: 9999, spot: 9999 };
+                            
+                            // Parse location format: "C 67 4" or "T 9 19"
+                            const parts = str.trim().split(/\s+/);
+                            if (parts.length >= 3) {
+                                return {
+                                    section: parts[0], // C or T
+                                    row: parseInt(parts[1], 10) || 9999,
+                                    spot: parseInt(parts[2], 10) || 9999
+                                };
+                            }
+                            return { section: 'ZZZ', row: 9999, spot: 9999 };
+                        };
+                        
+                        const locA = parseLocation(aVal);
+                        const locB = parseLocation(bVal);
+                        
+                        // Sort by section, then row, then spot
+                        if (locA.section !== locB.section) {
+                            return currentSort.direction === 'asc' 
+                                ? locA.section.localeCompare(locB.section)
+                                : locB.section.localeCompare(locA.section);
+                        }
+                        if (locA.row !== locB.row) {
+                            return currentSort.direction === 'asc' 
+                                ? locA.row - locB.row
+                                : locB.row - locA.row;
+                        }
+                        return currentSort.direction === 'asc' 
+                            ? locA.spot - locB.spot
+                            : locB.spot - locA.spot;
+                    }
+
                     // String sorting
                     aVal = aVal.toString().toLowerCase();
                     bVal = bVal.toString().toLowerCase();
@@ -1312,8 +1357,9 @@
             for (const [carId, parts] of Object.entries(parsed)) {
                 if (Array.isArray(parts)) {
                     parts.forEach(part => {
-                        if (part && part.trim()) {
-                            allParts[part.trim()] = (allParts[part.trim()] || 0) + 1;
+                        const partName = typeof part === 'object' ? part.name : part;
+                        if (partName && partName.trim()) {
+                            allParts[partName.trim()] = (allParts[partName.trim()] || 0) + 1;
                         }
                     });
                 }
@@ -1333,7 +1379,7 @@
             }
 
             container.innerHTML = partsArray.map(([part, count]) => `
-                <div class="part-tag" data-part="${escapeHtml(part)}" onclick="filterByPart('${part.replace(/'/g, "\'")}')">
+                <div class="part-tag" data-part="${escapeHtml(part)}" onclick="event.stopPropagation(); filterByPart('${part.replace(/'/g, "\'")}')">
                     ${escapeHtml(part)}
                     <span class="part-tag-count">${count}</span>
                 </div>
