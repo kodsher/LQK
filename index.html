@@ -737,6 +737,10 @@
                 <label class="modal-label">Cost ($)</label>
                 <input type="number" class="modal-input" id="editPartCost" placeholder="Optional" step="0.01" min="0">
             </div>
+            <div class="modal-input-wrapper">
+                <label class="modal-label">90 Day Vol</label>
+                <input type="number" class="modal-input" id="editPartVol90" placeholder="Optional" min="0">
+            </div>
             <div class="modal-input-wrapper" style="margin-top: 15px;">
                 <label class="modal-checkbox-label">
                     <input type="checkbox" id="editPartApplyGlobal" style="margin-right: 8px;">
@@ -949,6 +953,7 @@
                                     const partName = typeof part === 'string' ? part : part.name;
                                     const partStr = part.str || '-';
                                     const partPrice = part.price ? '$' + part.price : '-';
+                                    const partVol90 = part.vol90 || '-';
                                     // Calculate profit
                                     let profitDisplay = '-';
                                     if (part.price && part.cost && !isNaN(parseFloat(part.price)) && !isNaN(parseFloat(part.cost))) {
@@ -967,6 +972,7 @@
                                                 <span class="part-detail">STR: ${escapeHtml(String(strDisplay))}</span>
                                                 <span class="part-detail">Price: ${escapeHtml(String(partPrice))}</span>
                                                 <span class="part-detail">Profit: ${escapeHtml(String(profitDisplay))}</span>
+                                                <span class="part-detail">90 Vol: ${escapeHtml(String(partVol90))}</span>
                                             </div>
                                         </div>
                                         <div class="part-card-actions">
@@ -1000,15 +1006,21 @@
                             name: part,
                             str: '',
                             price: '',
-                            cost: ''
+                            cost: '',
+                            vol90: ''
                         };
+                    }
+                    // Ensure vol90 field exists for object parts
+                    if (!part.hasOwnProperty('vol90')) {
+                        part.vol90 = '';
                     }
                     return part;
                 });
 
                 // Save migrated parts back to localStorage if any were migrated
                 const hasOldFormat = parts.some(part => typeof part === 'string');
-                if (hasOldFormat) {
+                const hasMissingVol90 = parts.some(part => typeof part === 'object' && !part.hasOwnProperty('vol90'));
+                if (hasOldFormat || hasMissingVol90) {
                     allParts[carId] = migratedParts;
                     localStorage.setItem('lqkCarParts', JSON.stringify(allParts));
                 }
@@ -1174,7 +1186,8 @@
                 name: partName,
                 str: '',
                 price: '',
-                cost: ''
+                cost: '',
+                vol90: ''
             };
 
             // If multiple cars are selected, add part to all of them
@@ -1381,6 +1394,7 @@
             const partStr = typeof part === 'string' ? '' : (part.str || '');
             const partPrice = typeof part === 'string' ? '' : (part.price || '');
             const partCost = typeof part === 'string' ? '' : (part.cost || '');
+            const partVol90 = typeof part === 'string' ? '' : (part.vol90 || '');
 
             currentEditingCarId = carId;
             currentEditingPartIndex = partIndex;
@@ -1390,6 +1404,7 @@
             document.getElementById('editPartStr').value = partStr;
             document.getElementById('editPartPrice').value = partPrice;
             document.getElementById('editPartCost').value = partCost;
+            document.getElementById('editPartVol90').value = partVol90;
 
             // Show modal
             document.getElementById('editPartModal').classList.add('show');
@@ -1416,6 +1431,7 @@
             const newStr = document.getElementById('editPartStr').value.trim();
             const newPrice = document.getElementById('editPartPrice').value.trim();
             const newCost = document.getElementById('editPartCost').value.trim();
+            const newVol90 = document.getElementById('editPartVol90').value.trim();
 
             if (applyGlobal) {
                 // Get the original part name before editing
@@ -1438,7 +1454,8 @@
                                 name: name,  // Use the new name (could be same or changed)
                                 str: newStr,
                                 price: newPrice,
-                                cost: newCost
+                                cost: newCost,
+                                vol90: newVol90
                             };
                             hasChanges = true;
                         }
@@ -1456,7 +1473,8 @@
                     name: name,
                     str: newStr,
                     price: newPrice,
-                    cost: newCost
+                    cost: newCost,
+                    vol90: newVol90
                 };
 
                 saveCarParts(currentEditingCarId, parts);
@@ -1888,7 +1906,8 @@
                                             name: part,
                                             str: '',
                                             price: '',
-                                            cost: newCost === '' ? '' : parseFloat(newCost)
+                                            cost: newCost === '' ? '' : parseFloat(newCost),
+                                            vol90: ''
                                         };
                                     } else {
                                         part.cost = newCost === '' ? '' : parseFloat(newCost);
@@ -1902,7 +1921,7 @@
                     if (modified) {
                         localStorage.setItem('lqkCarParts', JSON.stringify(allParts));
                         loadAllParts();
-                        displayTable(carData); // Refresh the table to show updated costs
+                        applyFilters(); // Apply filters to maintain search/filter state
                     }
                 } catch (e) {
                     console.error('Error updating part cost:', e);
