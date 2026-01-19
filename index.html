@@ -928,16 +928,24 @@
                                     const partName = typeof part === 'string' ? part : part.name;
                                     const partStr = part.str || '-';
                                     const partPrice = part.price ? '$' + part.price : '-';
-                                    const partCost = part.cost ? '$' + part.cost : '-';
+                                    // Calculate profit
+                                    let profitDisplay = '-';
+                                    if (part.price && part.cost && !isNaN(parseFloat(part.price)) && !isNaN(parseFloat(part.cost))) {
+                                        const profit = parseFloat(part.price) - parseFloat(part.cost);
+                                        profitDisplay = '$' + profit.toFixed(2);
+                                    }
+                                    // Convert STR to percentage if it's a number
+                                    const strDisplay = (part.str && !isNaN(parseFloat(part.str))) ?
+                                        parseFloat(part.str).toFixed(1) + '%' : partStr;
                                     const isGreenlighted = greenlightedParts.includes(partName);
                                     return `
                                     <div class="part-card">
                                         <div class="part-card-main">
                                             <span class="part-card-text">${escapeHtml(partName)}</span>
                                             <div class="part-card-details">
-                                                <span class="part-detail">STR: ${escapeHtml(String(partStr))}</span>
+                                                <span class="part-detail">STR: ${escapeHtml(String(strDisplay))}</span>
                                                 <span class="part-detail">Price: ${escapeHtml(String(partPrice))}</span>
-                                                <span class="part-detail">Cost: ${escapeHtml(String(partCost))}</span>
+                                                <span class="part-detail">Profit: ${escapeHtml(String(profitDisplay))}</span>
                                             </div>
                                         </div>
                                         <div class="part-card-actions">
@@ -1713,13 +1721,24 @@
             const parsed = JSON.parse(partsData);
             allParts = {};
 
-            // Count occurrences of each part
+            // Count occurrences of each part and track cost
             for (const [carId, parts] of Object.entries(parsed)) {
                 if (Array.isArray(parts)) {
                     parts.forEach(part => {
                         const partName = typeof part === 'object' ? part.name : part;
+                        const partCost = typeof part === 'object' && part.cost ? part.cost : null;
+
                         if (partName && partName.trim()) {
-                            allParts[partName.trim()] = (allParts[partName.trim()] || 0) + 1;
+                            const trimmedName = partName.trim();
+                            // Store count and cost (use first non-null cost found)
+                            if (!allParts[trimmedName]) {
+                                allParts[trimmedName] = { count: 0, cost: partCost };
+                            }
+                            allParts[trimmedName].count += 1;
+                            // Update cost if not set and current part has a cost
+                            if (!allParts[trimmedName].cost && partCost) {
+                                allParts[trimmedName].cost = partCost;
+                            }
                         }
                     });
                 }
@@ -1731,19 +1750,22 @@
         // Display tags
         function displayTags() {
             const container = document.getElementById('tagsContainer');
-            const partsArray = Object.entries(allParts).sort((a, b) => b[1] - a[1]);
+            const partsArray = Object.entries(allParts).sort((a, b) => b[1].count - a[1].count);
 
             if (partsArray.length === 0) {
                 container.innerHTML = '<span style="color: var(--text-secondary); font-size: 13px;">No parts added yet</span>';
                 return;
             }
 
-            container.innerHTML = partsArray.map(([part, count]) => `
-                <div class="part-tag" data-part="${escapeHtml(part)}" onclick="event.stopPropagation(); filterByPart('${part.replace(/'/g, "\'")}')">
-                    ${escapeHtml(part)}
-                    <span class="part-tag-count">${count}</span>
+            container.innerHTML = partsArray.map(([part, data]) => {
+                const costDisplay = data.cost ? ` - $${data.cost}` : '';
+                return `
+                <div class="part-tag" data-part="${escapeHtml(part)}" onclick="event.stopPropagation(); filterByPart('${part.replace(/'/g, "\\'")}')">
+                    <span class="part-name">${escapeHtml(part)}${costDisplay}</span>
+                    <span class="part-tag-count">${data.count}</span>
+                    <button class="part-cost-edit-btn" onclick="event.stopPropagation(); editPartCost('${part.replace(/'/g, "\\'")}', '${data.cost || ''}')" title="Edit cost">✎</button>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Filter by part
@@ -1775,6 +1797,62 @@
             document.querySelectorAll('.part-tag').forEach(tag => tag.classList.remove('active'));
             document.getElementById('clearTagsBtn').style.display = 'none';
             applyFilters();
+        }
+
+        // Edit cost for all instances of a part
+        function editPartCost(partName, currentCost) {
+            const newCost = prompt(`Enter cost for "${partName}":`, currentCost);
+
+            // Check if user cancelled
+            if (newCost === null) return;
+
+            // Validate cost (should be a number or empty)
+            if (newCost !== '' && isNaN(parseFloat(newCost))) {
+                alert('Please enter a valid number or leave empty');
+                return;
+            }
+
+            // Update all instances of this part
+            const partsData = localStorage.getItem('lqkCarParts');
+            if (!partsData) return;
+
+            try {
+                const allParts = JSON.parse(partsData);
+                let modified = false;
+
+                // Iterate through all cars and update the part cost
+                for (const [carId, parts] of Object.entries(allParts)) {
+                    if (Array.isArray(parts)) {
+                        parts.forEach(part => {
+                            const currentPartName = typeof part === 'object' ? part.name : part;
+                            if (currentPartName === partName) {
+                                if (typeof part === 'string') {
+                                    // Migrate to object format
+                                    const index = allParts[carId].indexOf(part);
+                                    allParts[carId][index] = {
+                                        name: part,
+                                        str: '',
+                                        price: '',
+                                        cost: newCost === '' ? '' : parseFloat(newCost)
+                                    };
+                                } else {
+                                    part.cost = newCost === '' ? '' : parseFloat(newCost);
+                                }
+                                modified = true;
+                            }
+                        });
+                    }
+                }
+
+                if (modified) {
+                    localStorage.setItem('lqkCarParts', JSON.stringify(allParts));
+                    loadAllParts();
+                    displayTable(carData); // Refresh the table to show updated costs
+                }
+            } catch (e) {
+                console.error('Error updating part cost:', e);
+                alert('Error updating part cost');
+            }
         }
 
         // Apply all filters (search + part)
