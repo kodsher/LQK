@@ -1504,7 +1504,10 @@
                     filteredSortedData = filteredSortedData.filter(car => {
                         const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
                         const parts = getCarParts(carId);
-                        return parts.some(p => p.trim() === activePartFilter);
+                        return parts.some(p => {
+                            const partName = typeof p === 'string' ? p : p.name;
+                            return partName.trim() === activePartFilter;
+                        });
                     });
                 }
                 
@@ -1640,7 +1643,10 @@
                 if (activePartFilter) {
                     const carId = `car_${car.car}_${car.year}_${car.date}`.replace(/\s+/g, '_');
                     const parts = getCarParts(carId);
-                    return parts.some(p => p.trim() === activePartFilter);
+                    return parts.some(p => {
+                        const partName = typeof p === 'string' ? p : p.name;
+                        return partName.trim() === activePartFilter;
+                    });
                 }
 
                 return true;
