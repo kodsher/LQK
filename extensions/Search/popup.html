@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Search Navigator</title>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+    .results-list {
+      margin-top: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #fff;
+    }
+    .result-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-item:last-child {
+      border-bottom: none;
+    }
+    .result-item:hover {
+      background-color: #f5f5f5;
+    }
+    .result-info {
+      flex: 1;
+    }
+    .result-car {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 2px;
+    }
+    .result-search {
+      color: #666;
+      font-size: 11px;
+    }
+    .result-stats {
+      text-align: right;
+      min-width: 60px;
+    }
+    .result-percentage {
+      font-weight: bold;
+      font-size: 14px;
+      color: #1976d2;
+    }
+    .result-counts {
+      font-size: 10px;
+      color: #999;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      color: white;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #goButton {
+      background-color: #4CAF50;
+    }
+    #goButton:hover {
+      background-color: #45a049;
+    }
+    #downloadButton {
+      background-color: #2196F3;
+    }
+    #downloadButton:hover {
+      background-color: #0b7dda;
+    }
+    #clearButton {
+      background-color: #f44336;
+    }
+    #clearButton:hover {
+      background-color: #da190b;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .results {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #e3f2fd;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .results h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: #1976d2;
+    }
+    .results .percentage {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1976d2;
+    }
+    .results .details {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #666;
+    }
+    #status {
+      text-align: center;
+      color: #333;
+      font-size: 14px;
+      min-height: 25px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .file-upload {
+      margin-bottom: 15px;
+    }
+    .file-upload label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #333;
+      font-weight: bold;
+    }
+    .file-upload input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .file-upload input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    #stopButton {
+      background-color: #ff9800;
+    }
+    #stopButton:hover {
+      background-color: #e68900;
+    }
+    #stopButton:disabled {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">Loading...</div>
+
+  <div class="file-upload">
+    <label for="carsFile">Upload Cars (JSON array):</label>
+    <input type="file" id="carsFile" accept=".json">
+  </div>
+
+  <div class="file-upload">
+    <label for="partInput">Enter Part:</label>
+    <input type="text" id="partInput" placeholder="e.g., bumper, headlight, door">
+  </div>
+
+  <button id="goButton">Go</button>
+  <button id="stopButton" disabled>Stop</button>
+  <button id="downloadButton">Download CSV</button>
+  <button id="clearButton">Clear Data</button>
+
+  <div class="results" id="results" style="display: none;">
+    <h3>Sell Rate</h3>
+    <div class="percentage" id="percentage">-</div>
+    <div class="details" id="details">-</div>
+  </div>
+  <div class="results-list" id="resultsList" style="display: none;"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

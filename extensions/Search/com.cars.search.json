@@ -1,0 +1,9 @@
+{
+  "name": "com.cars.search",
+  "description": "Read search.txt from Cars folder",
+  "path": "/Users/admin/Desktop/Cars/getSearch.py",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cars Inventory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #121212;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #d32f2f;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .info {
+            padding: 15px 20px;
+            background-color: #2d1b1b;
+            text-align: center;
+            color: #ef5350;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        thead {
+            background-color: #d32f2f;
+            color: white;
+        }
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #b71c1c;
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover {
+            background-color: #c62828;
+        }
+        th::after {
+            content: ' ↕';
+            opacity: 0.3;
+            font-size: 12px;
+        }
+        th.asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+        th.desc::after {
+            content: ' ↓';
+            opacity: 1;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            color: #e0e0e0;
+        }
+        tbody tr:hover {
+            background-color: #2d2d2d;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #252525;
+        }
+        tbody tr:nth-child(even):hover {
+            background-color: #2d2d2d;
+        }
+        .error {
+            padding: 20px;
+            text-align: center;
+            color: #ef5350;
+            font-size: 16px;
+        }
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: #b0b0b0;
+            font-size: 16px;
+        }
+        .stats {
+            padding: 15px 20px;
+            background-color: #2d1b1b;
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-label {
+            color: #ef5350;
+            font-weight: 600;
+        }
+        .stat-value {
+            color: #ef5350;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .search-container {
+            padding: 15px 20px;
+            background-color: #252525;
+            border-bottom: 1px solid #333;
+        }
+        .search-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 10px 15px;
+            font-size: 14px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #d32f2f;
+        }
+        .search-input::placeholder {
+            color: #888;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 10px 20px;
+            background-color: #2d1b1b;
+        }
+        .header-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clear-btn {
+            background-color: #757575;
+            color: white;
+        }
+        .clear-btn:hover {
+            background-color: #616161;
+        }
+        .route-btn {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .route-btn:hover {
+            background-color: #c62828;
+        }
+        .route-btn:disabled {
+            background-color: #444;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .bookmark-cell {
+            text-align: center;
+            width: 60px;
+        }
+        .bookmark-btn {
+            background: none;
+            border: 2px solid #666;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .bookmark-btn:hover {
+            border-color: #d32f2f;
+            color: #d32f2f;
+        }
+        .bookmark-btn.bookmarked {
+            background-color: #d32f2f;
+            border-color: #d32f2f;
+            color: white;
+        }
+        .bookmarked-count {
+            color: #ef5350;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .route-display {
+            display: none;
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-bottom: 2px solid #d32f2f;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .route-display.show {
+            display: block;
+        }
+        .route-section {
+            margin-bottom: 20px;
+        }
+        .route-section-title {
+            color: #d32f2f;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .route-item {
+            padding: 10px;
+            background-color: #252525;
+            border-left: 3px solid #d32f2f;
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .route-item-number {
+            color: #d32f2f;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .route-vehicle-name {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+        .route-vehicle-details {
+            color: #b0b0b0;
+            margin-left: 30px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Cars Inventory <span id="bookmarkedCount" class="bookmarked-count">(0 saved)</span></h1>
+        </div>
+        <div class="header-buttons">
+            <button class="header-btn clear-btn" onclick="clearBookmarks()">Clear Route</button>
+            <button class="header-btn route-btn" id="showRouteBtn" onclick="showRoute()" disabled>Show Route</button>
+            <button class="header-btn route-btn" id="hideRouteBtn" onclick="hideRoute()" style="display: none;">Hide Route</button>
+        </div>
+        <div class="route-display" id="routeDisplay">
+            <div class="route-section" id="trucksSection"></div>
+            <div class="route-section" id="carsSection"></div>
+        </div>
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCars">-</div>
+                <div class="stat-label">Total Cars</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalMakes">-</div>
+                <div class="stat-label">Makes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalModels">-</div>
+                <div class="stat-label">Models</div>
+            </div>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search by make, model, year, or location..." onkeyup="filterTable()">
+        </div>
+        <div class="info" id="info">Loading data...</div>
+        <div class="table-container">
+            <table id="carsTable">
+                <thead>
+                    <tr>
+                        <th>Save</th>
+                        <th onclick="sortTable(0)">Year</th>
+                        <th onclick="sortTable(1)">Vehicle</th>
+                        <th onclick="sortTable(2)">Location</th>
+                        <th onclick="sortTable(3)">Available</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            const tableBody = document.getElementById('tableBody');
+            const infoDiv = document.getElementById('info');
+
+            // Debug: Check current URL
+            const currentUrl = window.location.href;
+            console.log('Current URL:', currentUrl);
+
+            // Debug: Check protocol
+            const protocol = window.location.protocol;
+            console.log('Protocol:', protocol);
+
+            if (protocol === 'file:') {
+                tableBody.innerHTML = '<tr><td colspan="5" class="error">Error: You are opening this file directly. Please use http://localhost:8000/site/ instead</td></tr>';
+                infoDiv.textContent = 'Please access via HTTP server, not file:// protocol';
+                return;
+            }
+
+            try {
+                // Try to fetch with more debugging
+                console.log('Attempting to fetch cars.json...');
+                const jsonUrl = 'cars.json';
+                console.log('Full URL will be:', window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + jsonUrl);
+
+                const response = await fetch(jsonUrl);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                console.log('Data loaded successfully, records:', data.length);
+
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="error">No data found</td></tr>';
+                    infoDiv.textContent = 'No data found in JSON file';
+                    return;
+                }
+
+                // Store data globally for sorting
+                currentData = data;
+
+                // Populate table using renderTable
+                renderTable(data);
+
+                // Calculate stats
+                const makes = new Set(data.map(c => c.make));
+                const models = new Set(data.map(c => `${c.make} ${c.model}`));
+
+                document.getElementById('totalCars').textContent = data.length;
+                document.getElementById('totalMakes').textContent = makes.size;
+                document.getElementById('totalModels').textContent = models.size;
+
+                infoDiv.textContent = `Showing ${data.length} cars from ${makes.size} makes`;
+
+                // Update bookmark count on load
+                updateBookmarkCount();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Full error:', error);
+
+                let errorMsg = error.message;
+                if (error.name === 'TypeError' && errorMsg === 'Failed to fetch') {
+                    errorMsg = 'Network error - check browser console and make sure you\'re using http://localhost:8000/site/';
+                }
+
+                tableBody.innerHTML = '<tr><td colspan="5" class="error">Error: ' + escapeHtml(errorMsg) + '</td></tr>';
+                infoDiv.textContent = 'Check browser console (F12) for details. Make sure URL starts with http://localhost:8000';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Global variables for sorting
+        let currentData = [];
+        let sortColumn = -1;
+        let sortDirection = 'asc'; // 'asc' or 'desc'
+
+        function sortTable(columnIndex) {
+            const columnNames = ['year', 'vehicle', 'location', 'available'];
+            const columnName = columnNames[columnIndex];
+
+            // Toggle direction if clicking same column, otherwise reset to ascending
+            if (sortColumn === columnIndex) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnIndex;
+                sortDirection = 'asc';
+            }
+
+            // Update header classes
+            document.querySelectorAll('th').forEach((th, index) => {
+                th.classList.remove('asc', 'desc');
+                if (index === columnIndex) {
+                    th.classList.add(sortDirection);
+                }
+            });
+
+            // Sort the data
+            currentData.sort((a, b) => {
+                let aVal, bVal;
+
+                // Handle year as number
+                if (columnName === 'year') {
+                    aVal = parseInt(a.year) || 0;
+                    bVal = parseInt(b.year) || 0;
+                }
+                // Handle vehicle (combined make and model)
+                else if (columnName === 'vehicle') {
+                    aVal = `${a.make} ${a.model}`;
+                    bVal = `${b.make} ${b.model}`;
+                }
+                // Handle available date
+                else if (columnName === 'available') {
+                    // Parse dates like "1/9/2026"
+                    const parseDate = (str) => {
+                        const parts = str.split('/');
+                        if (parts.length === 3) {
+                            return new Date(parts[2], parts[0] - 1, parts[1]);
+                        }
+                        return new Date(0);
+                    };
+                    aVal = parseDate(a.available);
+                    bVal = parseDate(b.available);
+                }
+                // Handle location and other fields
+                else {
+                    aVal = a[columnName];
+                    bVal = b[columnName];
+                }
+
+                // Compare
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Re-render table
+            renderTable(currentData);
+        }
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = data.map((car, index) => {
+                // Create unique car ID
+                const carId = `car_${car.year}_${car.make}_${car.model}_${car.location}`.replace(/\s+/g, '_');
+                const isBookmarked = isCarBookmarked(carId);
+
+                return `
+                <tr data-car-id="${carId}">
+                    <td class="bookmark-cell">
+                        <button class="bookmark-btn ${isBookmarked ? 'bookmarked' : ''}" onclick="toggleBookmark('${carId}')">
+                            ${isBookmarked ? '★' : '☆'}
+                        </button>
+                    </td>
+                    <td>${escapeHtml(car.year)}</td>
+                    <td>${escapeHtml(car.make)} ${escapeHtml(car.model)}</td>
+                    <td>${escapeHtml(car.location)}</td>
+                    <td>${escapeHtml(car.available)}</td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function filterTable() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let found = false;
+
+                for (let j = 0; j < cells.length; j++) {
+                    const cellText = cells[j].textContent.toLowerCase();
+                    if (cellText.includes(searchTerm)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                row.style.display = found ? '' : 'none';
+            }
+
+            // Update info text with count of visible rows
+            const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none').length;
+            const infoDiv = document.getElementById('info');
+            if (searchTerm) {
+                infoDiv.textContent = `Showing ${visibleRows} of ${currentData.length} cars (filtered)`;
+            } else {
+                const makes = new Set(currentData.map(c => c.make));
+                infoDiv.textContent = `Showing ${currentData.length} cars from ${makes.size} makes`;
+            }
+        }
+
+        // Bookmark management functions
+        function getBookmarks() {
+            const bookmarks = localStorage.getItem('carBookmarks');
+            return bookmarks ? JSON.parse(bookmarks) : [];
+        }
+
+        function saveBookmarks(bookmarks) {
+            localStorage.setItem('carBookmarks', JSON.stringify(bookmarks));
+            updateBookmarkCount();
+        }
+
+        function isCarBookmarked(carId) {
+            const bookmarks = getBookmarks();
+            return bookmarks.includes(carId);
+        }
+
+        function toggleBookmark(carId) {
+            const bookmarks = getBookmarks();
+            const index = bookmarks.indexOf(carId);
+
+            if (index > -1) {
+                bookmarks.splice(index, 1);
+            } else {
+                bookmarks.push(carId);
+            }
+
+            saveBookmarks(bookmarks);
+            updateBookmarkCount();
+            renderTable(currentData);
+
+            // Auto-update route display if it's visible
+            if (bookmarks.length === 0) {
+                hideRoute();
+            } else {
+                const routeDisplay = document.getElementById('routeDisplay');
+                if (routeDisplay.classList.contains('show')) {
+                    showRoute();
+                }
+            }
+        }
+
+        function updateBookmarkCount() {
+            const bookmarks = getBookmarks();
+            const countSpan = document.getElementById('bookmarkedCount');
+            const showRouteBtn = document.getElementById('showRouteBtn');
+
+            countSpan.textContent = `(${bookmarks.length} saved)`;
+            showRouteBtn.disabled = bookmarks.length === 0;
+        }
+
+        function clearBookmarks() {
+            saveBookmarks([]);
+            updateBookmarkCount();
+            renderTable(currentData);
+            hideRoute();
+        }
+
+        function isTruck(make, model) {
+            const modelUpper = model.toUpperCase();
+
+            // Specific truck/pickup models only
+            const truckModels = [
+                'F-150', 'F-250', 'F-350', 'F-450', 'F-550',
+                'SILVERADO 1500', 'SILVERADO 2500', 'SILVERADO 3500',
+                'SIERRA 1500', 'SIERRA 2500', 'SIERRA 3500',
+                'RAM 1500', 'RAM 2500', 'RAM 3500', 'RAM 4500', 'RAM 5500',
+                'TUNDRA', 'TITAN', 'RIDGELINE', 'TACOMA', 'COLORADO', 'CANYON',
+                'FRONTIER',
+                'TRUCK', 'PICKUP'
+            ];
+
+            // Check if model contains any truck model
+            return truckModels.some(truckModel => modelUpper.includes(truckModel));
+        }
+
+        function showRoute() {
+            const bookmarks = getBookmarks();
+
+            if (bookmarks.length === 0) {
+                return;
+            }
+
+            // Get bookmarked car details
+            const bookmarkedCars = currentData.filter(car => {
+                const carId = `car_${car.year}_${car.make}_${car.model}_${car.location}`.replace(/\s+/g, '_');
+                return bookmarks.includes(carId);
+            });
+
+            // Separate by location containing "truck"
+            const truckLocations = [];
+            const carLocations = [];
+
+            bookmarkedCars.forEach(car => {
+                const locationUpper = car.location.toUpperCase();
+                if (locationUpper.includes('TRUCK')) {
+                    truckLocations.push(car);
+                } else {
+                    carLocations.push(car);
+                }
+            });
+
+            // Sort each group by location
+            truckLocations.sort((a, b) => a.location.localeCompare(b.location));
+            carLocations.sort((a, b) => a.location.localeCompare(b.location));
+
+            // Build truck locations section HTML
+            const trucksSection = document.getElementById('trucksSection');
+            if (truckLocations.length > 0) {
+                let trucksHtml = '<div class="route-section-title">🚛 Truck Locations (' + truckLocations.length + ')</div>';
+                truckLocations.forEach((car, index) => {
+                    trucksHtml += `
+                        <div class="route-item">
+                            <span class="route-item-number">${index + 1}.</span>
+                            ${escapeHtml(car.location)} | ${escapeHtml(car.year)} ${escapeHtml(car.make)} ${escapeHtml(car.model)}
+                        </div>
+                    `;
+                });
+                trucksSection.innerHTML = trucksHtml;
+            } else {
+                trucksSection.innerHTML = '';
+            }
+
+            // Build car locations section HTML
+            const carsSection = document.getElementById('carsSection');
+            if (carLocations.length > 0) {
+                let carsHtml = '<div class="route-section-title">🚗 Car Locations (' + carLocations.length + ')</div>';
+                carLocations.forEach((car, index) => {
+                    carsHtml += `
+                        <div class="route-item">
+                            <span class="route-item-number">${index + 1}.</span>
+                            ${escapeHtml(car.location)} | ${escapeHtml(car.year)} ${escapeHtml(car.make)} ${escapeHtml(car.model)}
+                        </div>
+                    `;
+                });
+                carsSection.innerHTML = carsHtml;
+            } else {
+                carsSection.innerHTML = '';
+            }
+
+            // Show route display and toggle buttons
+            document.getElementById('routeDisplay').classList.add('show');
+            document.getElementById('showRouteBtn').style.display = 'none';
+            document.getElementById('hideRouteBtn').style.display = 'inline-block';
+        }
+
+        function hideRoute() {
+            document.getElementById('routeDisplay').classList.remove('show');
+            document.getElementById('showRouteBtn').style.display = 'inline-block';
+            document.getElementById('hideRouteBtn').style.display = 'none';
+        }
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

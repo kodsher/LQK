@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Search Navigator",
+  "version": "1.0",
+  "description": "Navigate to URL from search.json",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://www.ebay.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "resources": ["search.json"]
+}
